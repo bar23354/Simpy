@@ -8,13 +8,6 @@ import math
 import matplotlib.pyplot as plt
 
 RANDOM_SEED = 42
-NuevoProceso = 100
-IntervalosProcesos = 10.0
-MinWait = 1
-MaxWait = 3
-RAM_CAPACITY = 100
-CPU_SPEED = 3
-TiempoConcluido = []
 
 class Proceso:
     def __init__(self, env, name, procesador, ram, time_in_processor, instrucciones):
@@ -29,7 +22,7 @@ class Proceso:
         Llegada = self.env.now
         print('%7.4f %s: Entrando' % (Llegada, self.name))
 
-        # Pedir la memmoria
+        # Pedir la memoria
         with self.ram.get(self.instrucciones) as req:
             yield req  # esta parte es para esperar
 
@@ -43,7 +36,7 @@ class Proceso:
 
                 # Instrucciones
                 while self.instrucciones >= 3:
-                    instrucciones_a_ejecutar = min(CPU_SPEED, self.instrucciones)
+                    instrucciones_a_ejecutar = min(self.instrucciones, CPU_SPEED)
                     self.instrucciones -= instrucciones_a_ejecutar
 
                     # Simulación del tiempo de ejecución
@@ -56,13 +49,14 @@ class Proceso:
                         yield self.env.timeout(random.uniform(1, 21))
                         print('%7.4f %s: Regresando a Ready desde Waiting' % (self.env.now, self.name))
                     elif random.randint(1, 2) == 2:
-                        # Regresa a a estado de Ready nuevamente
+                        # Regresa a estado de Ready nuevamente
                         print('%7.4f %s: Pasando a Ready' % (self.env.now, self.name))
 
                 # Libera memoria y termina proceso
-                yield self.ram.put(self.instrucciones)
+                yield self.ram.put(1)
                 print('%7.4f %s: Liberando memoria y terminando' % (self.env.now, self.name))
                 TiempoConcluido.append(self.env.now)
+
 
 def source(env, number, interval, procesador, ram):
     for i in range(number):
@@ -73,53 +67,62 @@ def source(env, number, interval, procesador, ram):
         yield env.timeout(t)
 
 
-print("Procesador Empieza")
-random.seed(RANDOM_SEED)
-env = simpy.Environment()
+def run_simulation(num_procesos, intervalo_llegada, RAM_CAPACITY, CPU_SPEED):
+    global TiempoConcluido
 
-ram = simpy.Container(env, init=RAM_CAPACITY, capacity=RAM_CAPACITY)
-procesador = simpy.Resource(env, capacity=1)
-env.process(source(env, NuevoProceso, IntervalosProcesos, procesador, ram))
-env.run()
+    TiempoConcluido = []
 
-media = sum(TiempoConcluido) / len(TiempoConcluido)
-print("Media de los tiempos de finalización:", media)
+    print(f"Simulación con {num_procesos} procesos, intervalo de llegada {intervalo_llegada}, capacidad de RAM {RAM_CAPACITY}, velocidad de CPU {CPU_SPEED}")
 
-diferencias_cuadradas = [(tiempo - media) ** 2 for tiempo in TiempoConcluido]
-media_cuadrados_diferencias = sum(diferencias_cuadradas) / len(diferencias_cuadradas)
-desviacion_estandar = math.sqrt(media_cuadrados_diferencias)
-
-print("Desviación estándar de los tiempos de finalización:", desviacion_estandar)
-
-# RUN RUN RUN
-env.run()
-
-# Stats
-media = sum(TiempoConcluido) / len(TiempoConcluido)
-print("Media de los tiempos de finalización:", media)
-
-# Crear histograma del tiempo de finalización
-plt.hist(TiempoConcluido, bins=20, edgecolor='black')
-plt.title('Histograma del Tiempo de Finalización')
-plt.xlabel('Tiempo de Finalización')
-plt.ylabel('Frecuencia')
-plt.show()
-
-# Crear gráfica de línea del tiempo promedio
-num_procesos = [25, 50, 100, 150, 200]
-tiempos_promedio = []
-
-for num_proceso in num_procesos:
-    tiempos_finalizacion = []
+    random.seed(RANDOM_SEED)
     env = simpy.Environment()
+
     ram = simpy.Container(env, init=RAM_CAPACITY, capacity=RAM_CAPACITY)
     procesador = simpy.Resource(env, capacity=1)
-    env.process(source(env, num_proceso, IntervalosProcesos, procesador, ram))
+    env.process(source(env, num_procesos, intervalo_llegada, procesador, ram))
     env.run()
-    tiempos_promedio.append(sum(tiempos_finalizacion) / len(tiempos_finalizacion))
 
-plt.plot(num_procesos, tiempos_promedio, marker='o')
-plt.title('Número de Procesos vs Tiempo Promedio de Ejecución')
-plt.xlabel('Número de Procesos')
-plt.ylabel('Tiempo Promedio de Ejecución')
-plt.show()
+    # Stats
+    media = sum(TiempoConcluido) / len(TiempoConcluido)
+    print("Media de los tiempos de finalización:", media)
+
+    diferencias_cuadradas = [(tiempo - media) ** 2 for tiempo in TiempoConcluido]
+    media_cuadrados_diferencias = sum(diferencias_cuadradas) / len(diferencias_cuadradas)
+    desviacion_estandar = math.sqrt(media_cuadrados_diferencias)
+    print("Desviación estándar de los tiempos de finalización:", desviacion_estandar)
+
+    # Crear histograma del tiempo de finalización
+    plt.hist(TiempoConcluido, bins=20, edgecolor='black')
+    plt.title('Histograma del Tiempo de Finalización')
+    plt.xlabel('Tiempo de Finalización')
+    plt.ylabel('Frecuencia')
+    plt.show()
+
+    # Crear gráfica de línea del tiempo promedio
+    NumListaProceso = [25, 50, 100, 150, 200]  # Puedes ajustar esta lista según tus experimentos
+    AverageTime = []
+
+    for num_proceso in NumListaProceso:
+        tiempos_finalizacion = []
+        env = simpy.Environment()
+        ram = simpy.Container(env, init=RAM_CAPACITY, capacity=RAM_CAPACITY)
+        procesador = simpy.Resource(env, capacity=1)
+        env.process(source(env, num_proceso, intervalo_llegada, procesador, ram))
+        env.run()
+        AverageTime.append(sum(tiempos_finalizacion) / len(tiempos_finalizacion))
+
+    plt.plot(NumListaProceso, AverageTime, marker='o')
+    plt.title('Número de Procesos vs Tiempo Promedio de Ejecución')
+    plt.xlabel('Número de Procesos')
+    plt.ylabel('Tiempo Promedio de Ejecución')
+    plt.show()
+
+
+# Parámetros iniciales
+NuevoProceso = 100
+IntervalosProcesos = 10.0
+RAM_CAPACITY = 100
+CPU_SPEED = 3
+
+# Correr la simulación con los parámetros iniciales
+run_simulation(NuevoProceso, IntervalosProcesos, RAM_CAPACITY, CPU_SPEED)
