@@ -5,6 +5,7 @@
 import simpy
 import random
 import math
+import matplotlib.pyplot as plt
 
 RANDOM_SEED = 42
 NuevoProceso = 100
@@ -89,3 +90,36 @@ media_cuadrados_diferencias = sum(diferencias_cuadradas) / len(diferencias_cuadr
 desviacion_estandar = math.sqrt(media_cuadrados_diferencias)
 
 print("Desviación estándar de los tiempos de finalización:", desviacion_estandar)
+
+# RUN RUN RUN
+env.run()
+
+# Stats
+media = sum(TiempoConcluido) / len(TiempoConcluido)
+print("Media de los tiempos de finalización:", media)
+
+# Crear histograma del tiempo de finalización
+plt.hist(TiempoConcluido, bins=20, edgecolor='black')
+plt.title('Histograma del Tiempo de Finalización')
+plt.xlabel('Tiempo de Finalización')
+plt.ylabel('Frecuencia')
+plt.show()
+
+# Crear gráfica de línea del tiempo promedio
+num_procesos = [25, 50, 100, 150, 200]
+tiempos_promedio = []
+
+for num_proceso in num_procesos:
+    tiempos_finalizacion = []
+    env = simpy.Environment()
+    ram = simpy.Container(env, init=RAM_CAPACITY, capacity=RAM_CAPACITY)
+    procesador = simpy.Resource(env, capacity=1)
+    env.process(source(env, num_proceso, IntervalosProcesos, procesador, ram))
+    env.run()
+    tiempos_promedio.append(sum(tiempos_finalizacion) / len(tiempos_finalizacion))
+
+plt.plot(num_procesos, tiempos_promedio, marker='o')
+plt.title('Número de Procesos vs Tiempo Promedio de Ejecución')
+plt.xlabel('Número de Procesos')
+plt.ylabel('Tiempo Promedio de Ejecución')
+plt.show()
