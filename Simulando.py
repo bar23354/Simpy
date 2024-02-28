@@ -7,13 +7,13 @@ import random
 import math
 
 RANDOM_SEED = 42
-Procesos_Nuevos = 100
-Procesos_entre_Intervalos = 10.0
-Min_Espera = 1
-Max_Espera = 3
+NuevoProceso = 100
+IntervalosProcesos = 10.0
+MinWait = 1
+MaxWait = 3
 RAM_CAPACITY = 100
 CPU_SPEED = 3
-tiempos_finalizacion = []
+TiempoConcluido = []
 
 class Proceso:
     def __init__(self, env, name, procesador, ram, time_in_processor, instrucciones):
@@ -61,4 +61,31 @@ class Proceso:
                 # Libera memoria y termina proceso
                 yield self.ram.put(self.instrucciones)
                 print('%7.4f %s: Liberando memoria y terminando' % (self.env.now, self.name))
-                tiempos_finalizacion.append(self.env.now)
+                TiempoConcluido.append(self.env.now)
+
+def source(env, number, interval, procesador, ram):
+    for i in range(number):
+        instrucciones = random.randint(1, 10)
+        p = Proceso(env, 'Proceso%02d' % i, procesador, ram, time_in_processor=3.0, instrucciones=instrucciones)
+        env.process(p.run())
+        t = random.expovariate(1.0 / interval)
+        yield env.timeout(t)
+
+
+print("Procesador Empieza")
+random.seed(RANDOM_SEED)
+env = simpy.Environment()
+
+ram = simpy.Container(env, init=RAM_CAPACITY, capacity=RAM_CAPACITY)
+procesador = simpy.Resource(env, capacity=1)
+env.process(source(env, NuevoProceso, IntervalosProcesos, procesador, ram))
+env.run()
+
+media = sum(TiempoConcluido) / len(TiempoConcluido)
+print("Media de los tiempos de finalización:", media)
+
+diferencias_cuadradas = [(tiempo - media) ** 2 for tiempo in TiempoConcluido]
+media_cuadrados_diferencias = sum(diferencias_cuadradas) / len(diferencias_cuadradas)
+desviacion_estandar = math.sqrt(media_cuadrados_diferencias)
+
+print("Desviación estándar de los tiempos de finalización:", desviacion_estandar)
